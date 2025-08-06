@@ -10,3 +10,12 @@
 [submodule "libs/microservices"]
 	path = libs/microservices
 	url = https://github.com/ross2p/mindlet-microservices.git
+[submodule "apps/auth"]
+	path = apps/auth
+	url = https://github.com/ross2p/mindlet-auth.git
+[submodule "apps/token"]
+	path = apps/token
+	url = https://github.com/ross2p/mindlet-token.git
+[submodule "apps/user"]
+	path = apps/user
+	url = https://github.com/ross2p/mindlet-user.git
