@@ -16,3 +16,12 @@
 [submodule "apps/user"]
 	path = apps/user
 	url = https://github.com/ross2p/mindlet-user.git
+[submodule "apps/subscription"]
+	path = apps/subscription
+	url = https://github.com/ross2p/mindlet-subscription.git
+[submodule "apps/payment"]
+	path = apps/payment
+	url = https://github.com/ross2p/mindlet-payment.git
+[submodule "apps/email"]
+	path = apps/email
+	url = https://github.com/ross2p/mindlet-email.git
