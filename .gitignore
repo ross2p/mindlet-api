@@ -1,3 +1,6 @@
+# Local scaffold cache (applied into submodules by scripts)
+.scaffold-cache/
+
 # compiled output
 */dist
 */node_modules

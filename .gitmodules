@@ -22,6 +22,21 @@
 [submodule "apps/payment"]
 	path = apps/payment
 	url = https://github.com/ross2p/mindlet-payment.git
-[submodule "apps/email"]
-	path = apps/email
-	url = https://github.com/ross2p/mindlet-email.git
+[submodule "apps/notification"]
+	path = apps/notification
+	url = https://github.com/ross2p/mindlet-notification.git
+[submodule "apps/deck"]
+	path = apps/deck
+	url = https://github.com/ross2p/mindlet-deck.git
+[submodule "apps/ai"]
+	path = apps/ai
+	url = https://github.com/ross2p/mindlet-ai.git
+[submodule "apps/study"]
+	path = apps/study
+	url = https://github.com/ross2p/mindlet-study.git
+[submodule "apps/collaboration"]
+	path = apps/collaboration
+	url = https://github.com/ross2p/mindlet-collaboration.git
+[submodule "apps/analytics"]
+	path = apps/analytics
+	url = https://github.com/ross2p/mindlet-analytics.git

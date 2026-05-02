@@ -1,4 +1,11 @@
-version: "3.8"
+x-microservice-env: &microservice_env
+  PORT: 3000
+  NODE_ENV: development
+  KAFKA_BROKER: kafka:29092
+  BASE_URL: http://nginx
+  SWAGGER_USER: admin
+  SWAGGER_PASSWORD: admin
+  SENTRY_DSN: https://example.com/placeholder
 
 services:
   zookeeper:
@@ -23,7 +30,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - app-network
@@ -46,66 +52,299 @@ services:
     networks:
       - app-network
 
-  # auth:
-  #   build:
-  #     context: ./apps/auth
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3002:3000"
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #   environment:
-  #     - KAFKA_BROKER=kafka:9092
-  #   networks:
-  #     - app-network
+  postgres:
+    image: postgres:16-alpine
+    hostname: postgres
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mindlet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mindlet}
+      POSTGRES_DB: ${POSTGRES_DB:-mindlet}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-mindlet} -d ${POSTGRES_DB:-mindlet}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # user:
-  #   build:
-  #     context: ./apps/user
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3003:3000"
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #   environment:
-  #     - KAFKA_BROKER=kafka:9092
-  #   networks:
-  #     - app-network
-  # nginx:
-  #   image: nginx:latest
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - auth
-  #     - user
-  #   networks:
-  #     - app-network
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --save "" --appendonly no
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # db:
-  #   image: postgres:latest
-  #   hostname: pg_db
-  #   ports:
-  #     - "${DATABASE_PORT:-5432}:5432"
-  #   environment:
-  #     POSTGRES_USER: ${DATABASE_USERNAME}
-  #     POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-  #     POSTGRES_DB: ${DATABASE_NAME}
-  #   env_file:
-  #     - ./.env
-  #   volumes:
-  #     - pg_data:/var/lib/postgresql/data
-  #   networks:
-  #     - app-network
-  #   healthcheck:
-  #     test:
-  #       ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  mongo:
+    image: mongo:7
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-mindlet}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/auth
+    ports:
+      - "3002:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: AUTH_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  user:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/user
+    ports:
+      - "3003:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: USER_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  token:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/token
+    ports:
+      - "3004:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: TOKEN_SERVICE
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  subscription:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/subscription
+    ports:
+      - "3005:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: SUBSCRIPTION_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  payment:
+    build:
+      context: .
+      dockerfile: docker/payment-app.Dockerfile
+    ports:
+      - "3006:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  notification:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/notification
+    ports:
+      - "3007:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: NOTIFICATION_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+      MONGODB_URI: mongodb://mongo:27017/${MONGO_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  deck:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/deck
+    ports:
+      - "3008:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: DECK_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  ai:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/ai
+    ports:
+      - "3009:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: AI_SERVICE
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  study:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/study
+    ports:
+      - "3010:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: STUDY_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  collaboration:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/collaboration
+    ports:
+      - "3011:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: COLLABORATION_SERVICE
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  analytics:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/analytics
+    ports:
+      - "3012:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: ANALYTICS_SERVICE
+      MONGODB_URI: mongodb://mongo:27017/${MONGO_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./configs/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth
+      - user
+      - token
+      - subscription
+      - payment
+      - notification
+      - deck
+      - ai
+      - study
+      - collaboration
+      - analytics
+    networks:
+      - app-network
 
 networks:
   app-network:
@@ -113,31 +352,5 @@ networks:
 
 volumes:
   pg_data:
-# version: "3.8"
-# services:
-#   zookeeper:
-#     image: confluentinc/cp-zookeeper:latest
-#     environment:
-#       ZOOKEEPER_CLIENT_PORT: 2181
-#       ZOOKEEPER_TICK_TIME: 2000
-#     ports:
-#       - "2181:2181"
-
-#   kafka:
-#     image: confluentinc/cp-kafka:latest
-#     depends_on:
-#       - zookeeper
-#     ports:
-#       - "9092:9092"
-#       - "29092:29092"
-#     environment:
-#       KAFKA_BROKER_ID: 1
-#       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
-#       # 👇 два різних listeners
-#       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-#       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-#       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-#       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-#       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  mongo_data:
+  redis_data:
