@@ -10,17 +10,9 @@ git clone --recurse-submodules <url>
 git submodule update --init --recursive
 ```
 
-## New microservices (deck, ai, study, collaboration, analytics)
+## New microservices
 
-Remote GitHub repos are named `mindlet-<name>` (e.g. `mindlet-deck`). If they do not exist yet:
-
-```bash
-export PATH="/opt/homebrew/bin:$PATH"
-gh auth login -h github.com
-./scripts/create-github-repos-and-push-services.sh
-```
-
-Scaffold templates are generated into `.scaffold-cache/` by `./scripts/generate-service-scaffold.sh` (optional to regenerate).
+Service repos are named `mindlet-<name>` (e.g. `mindlet-deck`). Create the repo on GitHub (manually or `gh repo create ross2p/mindlet-<name> --private`), add it as a submodule, then push from `apps/<name>`.
 
 ## Shared library `@ross2p/common`
 
@@ -55,4 +47,4 @@ docker compose up --build
 
 ## GitHub CLI
 
-`gh` is used to create private repos. Install: `brew install gh`.
+Optional: `brew install gh` for `gh repo create`, etc.
