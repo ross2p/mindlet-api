@@ -224,17 +224,17 @@ services:
     networks:
       - app-network
 
-  deck:
+  course:
     build:
       context: .
       dockerfile: docker/nest-app.Dockerfile
       args:
-        APP_DIR: apps/deck
+        APP_DIR: apps/course
     ports:
       - "3008:3000"
     environment:
       <<: *microservice_env
-      SERVICE_NAME: DECK_SERVICE
+      SERVICE_NAME: COURSE_SERVICE
       DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
     depends_on:
       kafka:
@@ -265,40 +265,46 @@ services:
     networks:
       - app-network
 
-  study:
+  team:
     build:
       context: .
       dockerfile: docker/nest-app.Dockerfile
       args:
-        APP_DIR: apps/study
+        APP_DIR: apps/team
     ports:
       - "3010:3000"
     environment:
       <<: *microservice_env
-      SERVICE_NAME: STUDY_SERVICE
+      SERVICE_NAME: TEAM_SERVICE
       DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+      REDIS_URL: redis://redis:6379
     depends_on:
       kafka:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 
-  collaboration:
+  lesson:
     build:
       context: .
       dockerfile: docker/nest-app.Dockerfile
       args:
-        APP_DIR: apps/collaboration
+        APP_DIR: apps/lesson
     ports:
       - "3011:3000"
     environment:
       <<: *microservice_env
-      SERVICE_NAME: COLLABORATION_SERVICE
+      SERVICE_NAME: LESSON_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
       REDIS_URL: redis://redis:6379
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -338,10 +344,10 @@ services:
       - subscription
       - payment
       - notification
-      - deck
+      - course
       - ai
-      - study
-      - collaboration
+      - team
+      - lesson
       - analytics
     networks:
       - app-network

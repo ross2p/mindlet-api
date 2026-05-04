@@ -12,7 +12,7 @@ git submodule update --init --recursive
 
 ## New microservices
 
-Service repos are named `mindlet-<name>` (e.g. `mindlet-deck`). Create the repo on GitHub (manually or `gh repo create ross2p/mindlet-<name> --private`), add it as a submodule, then push from `apps/<name>`.
+Service repos are named `mindlet-<name>` (e.g. `mindlet-lesson`, `mindlet-course`). Create the repo on GitHub (manually or `gh repo create ross2p/mindlet-<name> --private`), add it as a submodule, then push from `apps/<name>`.
 
 ## Shared library `@ross2p/common`
 
