@@ -59,7 +59,7 @@ Grouped by **owning service** (the handler). **`Status`**: `implemented` = handl
 
 | Pattern | Producer(s) | Consumer | Request (summary) | Response (summary) | When / why | Status |
 |---------|-------------|----------|-------------------|--------------------|------------|--------|
-| `auth.user.validate` | HTTP stacks using [`AuthGuard`](../libs/common/src/modules/auth-guards/auth.guard.ts) / [`OptionalAuthGuard`](../libs/common/src/modules/auth-guards/optional-auth.guard.ts) (`Services.AUTH` client) | `auth` | `{ accessToken }` | `UserEntity` | Validate JWT and load user on protected routes | **implemented** — [`UserValidatorController`](../apps/auth/src/user-validator/user-validator.controller.ts) |
+| `auth.user.validate` | HTTP stacks using [`AuthGuard`](../libs/common/src/modules/auth-guards/auth.guard.ts) / [`OptionalAuthGuard`](../libs/common/src/modules/auth-guards/optional-auth.guard.ts) (`Services.AUTH` client) | `auth` | `{ accessToken }` | `AuthenticatedUser` | Validate JWT + active session on protected routes | **implemented** — [`AuthController`](../apps/auth/src/auth/auth.controller.ts) |
 
 ### `user`
 
@@ -67,7 +67,7 @@ Grouped by **owning service** (the handler). **`Status`**: `implemented` = handl
 |---------|-------------|----------|-------------------|--------------------|------------|--------|
 | `user.create` | `auth` [`CredentialsService`](../apps/auth/src/credentials/credentials.service.ts) | `user` | `CreateUserDto` (plaintext `password`) | `UserEntity` | Register — `user` bcrypt-hashes password and creates `User` + `UserPrivateData` (nested write) | **implemented** — [`UserMessageController`](../apps/user/src/user/user-message.controller.ts) |
 | `user.get_by_email` | `auth` [`CredentialsService`](../apps/auth/src/credentials/credentials.service.ts) | `user` | `{ email }` | `UserEntity` | Login lookup | **implemented** — [`UserMessageController`](../apps/user/src/user/user-message.controller.ts) |
-| `user.get_by_id` | `auth` (token validation, guards) | `user` | `{ userId }` | `UserEntity` | Load profile by id | **implemented** — same file |
+| `user.get_by_id` | `auth` (`AuthService.generateTokens`, flows needing full user projection) | `user` | `{ userId }` | `UserEntity` | Load profile by id | **implemented** — same file |
 | `user.password.verify` (`UserMessage.VERIFY_PASSWORD`) | `auth` [`CredentialsService`](../apps/auth/src/credentials/credentials.service.ts) | `user` | `{ userId, password }` | `true` on success; throws on invalid | Login password check; `auth` wraps in try/catch → `Invalid credentials` | **implemented** — [`UserPasswordMessageController`](../apps/user/src/user-password/user-password-message.controller.ts) |
 | `user.email.mark_verified` | `auth` [`EmailVerificationService`](../apps/auth/src/email-verification/email-verification.service.ts) | `user` | `{ userId, email }` | `UserEntity` | Sets `emailVerifiedAt` | **implemented** — [`UserMessageController`](../apps/user/src/user/user-message.controller.ts) |
 | `user.password.update` (`UserPrivateMessage.UPDATE`) | `auth` [`PasswordResetService`](../apps/auth/src/password-reset/password-reset.service.ts) | `user` | `{ userId, password }` (plaintext new password) | `UserPrivateDataEntity` | After reset token consume — `user` hashes before persist | **implemented** — [`UserPrivateMessageController`](../apps/user/src/user-private-data/user-private-message.controller.ts) |
