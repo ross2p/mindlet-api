@@ -4,6 +4,12 @@
 
 **Status:** TODO (implemented / partial / scaffolded / planned)
 
+## Current implementation notes
+
+- Prisma models: `Test`, `Question`, `AnswerOption`, `CorrectTextAnswer`, `Attempt`, `AttemptAnswer` (see `prisma/schema.prisma`).
+- HTTP CRUD exists per resource (`/test`, `/question`, `/answer-option`, `/correct-text-answer`, `/attempt`, `/attempt-answer`).
+- **Not implemented yet:** submit flow, auto/manual scoring (`q_score`, `final_score`, `passed`), time-limit enforcement, Kafka `test.attempt.*` events — see `AttemptService` TODO and `17-grading.md`.
+
 ## Documentation map
 
 | Topic | File |
