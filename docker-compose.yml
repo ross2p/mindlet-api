@@ -118,10 +118,15 @@ services:
       <<: *microservice_env
       SERVICE_NAME: AUTH_SERVICE
       DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+      REDIS_URL: redis://redis:6379
+      TWO_FACTOR_ISSUER: Mindlet
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:-MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=}
     depends_on:
       kafka:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -142,26 +147,6 @@ services:
       kafka:
         condition: service_healthy
       postgres:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  token:
-    build:
-      context: .
-      dockerfile: docker/nest-app.Dockerfile
-      args:
-        APP_DIR: apps/token
-    ports:
-      - "3004:3000"
-    environment:
-      <<: *microservice_env
-      SERVICE_NAME: TOKEN_SERVICE
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      kafka:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -331,6 +316,49 @@ services:
     networks:
       - app-network
 
+  deck:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/deck
+    ports:
+      - "3013:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: DECK_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  test:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/test
+    ports:
+      - "3014:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: TEST_SERVICE
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mindlet}:${POSTGRES_PASSWORD:-mindlet}@postgres:5432/${POSTGRES_DB:-mindlet}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
   nginx:
     image: nginx:alpine
     ports:
@@ -340,7 +368,6 @@ services:
     depends_on:
       - auth
       - user
-      - token
       - subscription
       - payment
       - notification
@@ -349,6 +376,8 @@ services:
       - team
       - lesson
       - analytics
+      - deck
+      - test
     networks:
       - app-network
 

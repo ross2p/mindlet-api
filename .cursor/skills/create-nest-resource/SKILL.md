@@ -59,7 +59,7 @@ If the module grows to have multiple services or controllers, group them into `s
 
 - **Controller**: NO business logic, NO data manipulation. Only delegates to the service. Must include Swagger decorators.
 - **Service**: Holds business logic. MUST NOT execute database queries or external API calls directly — always go through the repository/client.
-- **Repository**: Direct DB / external API access only. Minimal logic, just query execution. Uses `DatabaseService` from `@ross2p/database`.
+- **Repository**: Direct DB / external API access only. Minimal logic, just query execution. Each microservice owns its DB — inject that service’s `PrismaService` (or equivalent client), **not** the removed shared database library from the monorepo.
 - **Mapper**: Optional. If created, methods MUST NOT be `static` — must be an `@Injectable()` class.
 - **DTOs**: Use `@ApiProperty` and `class-validator` decorators. `Update` DTOs should extend `PartialType` from `@nestjs/swagger`.
 - **Validation**: Use utility helpers like `checkExists` from `@ross2p/common` (or the project equivalent) for existence checks instead of ad-hoc `if (!x) throw`.
@@ -176,6 +176,12 @@ export class NameEntityController {
 }
 ```
 
+### Anti-pattern: union response types (forbidden)
+
+Each HTTP endpoint must return **one stable response DTO type** (or `void` / `204`). Do **not** return a TypeScript union of different shapes based on runtime branching (e.g. `UserTokensDto | { needs2fa: true; challengeToken: string }`). Clients and OpenAPI cannot rely on unstable unions.
+
+**Do instead**: use a single DTO and express state with fields (e.g. `is2faEnabled`, optional metadata) or use separate endpoints.
+
 ### 3. Service — `name-entity.service.ts`
 
 CRITICAL: No direct DB or external API calls. Always inject and use the repository/client. Use `checkExists` for existence validation.
@@ -224,43 +230,34 @@ Direct DB access only. Minimal logic.
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, Prisma } from '@ross2p/database';
 import { CreateNameEntityDto } from './dtos/create-name-entity.dto';
 import { UpdateNameEntityDto } from './dtos/update-name-entity.dto';
 import { NameEntity } from './name-entity.entity';
 
+// Per-service DB: inject your app’s PrismaService (or DB client) here — see prisma/schema.prisma in this service.
+// Example with Prisma-generated delegate:
+// constructor(private readonly prisma: PrismaService) {}
+
 @Injectable()
 export class NameEntityRepository {
-  private readonly nameEntityRepository: Prisma.NameEntityDelegate;
-
-  constructor(databaseService: DatabaseService) {
-    this.nameEntityRepository = databaseService.client.nameEntity;
+  public async findNameEntityById(_id: string): Promise<NameEntity | null> {
+    // return this.prisma.nameEntity.findUnique({ where: { id } });
+    throw new Error('Implement with per-service Prisma');
   }
 
-  public async findNameEntityById(id: string): Promise<NameEntity | null> {
-    return this.nameEntityRepository.findUnique({
-      where: { id },
-    });
-  }
-
-  public async createNameEntity(data: CreateNameEntityDto): Promise<NameEntity> {
-    return this.nameEntityRepository.create({ data });
+  public async createNameEntity(_data: CreateNameEntityDto): Promise<NameEntity> {
+    throw new Error('Implement with per-service Prisma');
   }
 
   public async updateNameEntity(
-    id: string,
-    data: UpdateNameEntityDto,
+    _id: string,
+    _data: UpdateNameEntityDto,
   ): Promise<NameEntity> {
-    return this.nameEntityRepository.update({
-      where: { id },
-      data,
-    });
+    throw new Error('Implement with per-service Prisma');
   }
 
-  public async deleteNameEntity(id: string): Promise<NameEntity> {
-    return this.nameEntityRepository.delete({
-      where: { id },
-    });
+  public async deleteNameEntity(_id: string): Promise<NameEntity> {
+    throw new Error('Implement with per-service Prisma');
   }
 }
 ```
@@ -309,7 +306,7 @@ export class UpdateNameEntityDto extends PartialType(CreateNameEntityDto) {}
 
 ### 8. Entity — `name-entity.entity.ts`
 
-If the project re-exports a Prisma-based entity from `@ross2p/types`, prefer importing/re-exporting from there. Otherwise scaffold a minimal class with `@ApiProperty` for Swagger:
+If the project shares DTOs from `@ross2p/types`, prefer importing/re-exporting from there. Otherwise scaffold a minimal class with `@ApiProperty` for Swagger:
 
 ```typescript
 import { ApiProperty } from '@nestjs/swagger';
@@ -348,8 +345,9 @@ Follow this checklist on every invocation:
 
 ## Anti-Patterns to Reject
 
+- Union or conditional response types on a single route (different JSON shapes per branch); use one DTO or split routes.
 - Business logic in controllers (mapping, validation branching, conditionals beyond delegation).
-- Direct `databaseService.client.*` or `prisma.*` calls inside services.
+- Direct `prisma.*` calls inside services (keep DB access in repositories).
 - Generic method names like `update(id, dto)`, `delete(id)`, `findOne(id)` on services or controllers.
 - `static` methods on mappers.
 - Update DTOs that duplicate fields instead of extending `PartialType(CreateXDto)`.
@@ -358,10 +356,4 @@ Follow this checklist on every invocation:
 
 ## Example — User Module (reference shape in this codebase)
 
-The existing `apps/user/src/user/` module already follows these conventions and is the canonical reference:
-
-- `user.repository.ts` — uses `DatabaseService` from `@ross2p/database`, `Prisma.UserDelegate`, methods like `findUserById`, `createUser`, `updateUser`, `deleteUser`.
-- `user.service.ts` — injects `UserRepository`, uses `checkExists` from `@ross2p/common`, methods `findUserByIdOrThrow`, `findUserByEmailOrThrow`, `createUser`, `updateUser`, `deleteUser`.
-- `user.controller.ts` — only delegates to the service.
-
-When generating a new resource, mirror this shape exactly, only renaming the entity.
+The existing `apps/user/src/user/` module follows these conventions for layering (repository → service → controller). **Note:** `user.repository.ts` is currently a stub pending per-service Prisma; when adding DB, mirror the repository pattern above with a local `PrismaService`.

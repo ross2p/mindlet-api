@@ -1,14 +1,7 @@
-# Local scaffold cache (applied into submodules by scripts)
-.scaffold-cache/
-
-# Root dev tooling (mindlet-api/package.json — concurrently, etc.)
-/node_modules
-/package-lock.json
-
 # compiled output
-*/dist
-*/node_modules
-*/build
+/dist
+/node_modules
+/build
 
 # Logs
 logs
@@ -23,8 +16,8 @@ lerna-debug.log*
 .DS_Store
 
 # Tests
-*/coverage
-*/.nyc_output
+/coverage
+/.nyc_output
 
 # IDEs and editors
 /.idea

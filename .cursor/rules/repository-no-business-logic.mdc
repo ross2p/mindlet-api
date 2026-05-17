@@ -1,0 +1,42 @@
+---
+description: Repositories must only perform persistence (queries/commands). No business rules, branching workflows, or orchestration.
+globs: ["apps/**/*.repository.ts"]
+alwaysApply: false
+---
+
+# No Business Logic in Repositories
+
+A `*.repository.ts` file must **only** translate between your domain DTOs / Prisma types and the database (or cache key/value shapes). It must **not** encode business rules.
+
+## Forbidden in repositories
+
+- Deciding *when* to revoke vs update, or *who* may access a row (ownership checks).
+- Calling `checkExists` / throwing HTTP exceptions for “not found” — do that in **services**.
+- Hashing secrets, computing TTLs from business rules, emitting domain events, or calling other services.
+- `if (userId !== row.userId) throw …` — belongs in a **service**.
+
+## Allowed in repositories
+
+- `findUnique`, `findMany`, `create`, `update`, `updateMany`, `delete` (and equivalent cache `get`/`set`/`del`).
+- Building plain `Prisma.*Input` objects **from arguments already prepared** by the service (no extra policy).
+
+## Correct split
+
+```typescript
+// session.repository.ts — OK
+async updateSession(id: string, data: Prisma.SessionUpdateInput): Promise<Session> {
+  return this.db.session.update({ where: { id }, data });
+}
+
+// session.service.ts — OK (policy + checkExists + side effects)
+async signOut(userId: string, sessionId: string): Promise<void> {
+  const row = await checkExists(this.sessionRepository.findSessionById(sessionId), 'Session not found');
+  if (row.userId !== userId) throw new ForbiddenException();
+  await this.sessionRepository.updateSession(sessionId, { revokedAt: new Date(), revokedReason: 'sign-out' });
+  await this.sessionCache.markRevoked(sessionId);
+}
+```
+
+## Cross-reference
+
+Pair with `repository-only-data-access.mdc` (who may inject `DatabaseService` / `CacheService`).

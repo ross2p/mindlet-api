@@ -1,0 +1,46 @@
+---
+description: Every HTTP route handler in a controller must have the @ResponseMessage decorator from @ross2p/common.
+globs: ["apps/**/*.controller.ts"]
+alwaysApply: false
+---
+
+# @ResponseMessage on Every HTTP Endpoint
+
+Every HTTP route handler (`@Get`, `@Post`, `@Put`, `@Patch`, `@Delete`) **must** be decorated with `@ResponseMessage('…')` from `@ross2p/common`.
+
+The `ResponseInterceptor` in `CommonModule` reads this metadata and includes a human-readable `message` field in the `SuccessResponse<T>` envelope.
+
+## Rule
+
+Add `@ResponseMessage('Descriptive message')` directly above every HTTP route handler decorator.
+
+## Correct pattern
+
+```typescript
+import { ResponseMessage } from '@ross2p/common';
+
+@Controller('session')
+export class SessionController {
+  @Post('sign-out')
+  @ResponseMessage('Signed out successfully')
+  async signOut(...) { ... }
+
+  @Get()
+  @ResponseMessage('Sessions retrieved')
+  async listSessions(...) { ... }
+}
+```
+
+## Incorrect pattern
+
+```typescript
+@Controller('session')
+export class SessionController {
+  @Post('sign-out')           // ← missing @ResponseMessage
+  async signOut(...) { ... }
+}
+```
+
+## Source
+
+`@ResponseMessage` is defined in `libs/common/src/decorators/response-message.decorator.ts` and exported from `@ross2p/common`.

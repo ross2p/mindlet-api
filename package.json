@@ -1,0 +1,12 @@
+{
+  "name": "mindlet-api-root",
+  "private": true,
+  "description": "Super-repo root scripts; apps and libs are git submodules.",
+  "scripts": {
+    "dev:bootstrap": "bash tools/dev-bootstrap.sh",
+    "dev:watch-libs": "bash tools/dev-watch-libs.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

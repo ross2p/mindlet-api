@@ -13,7 +13,6 @@ const p = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 const map = {
   '@ross2p/common': 'common',
   '@ross2p/types': 'types',
-  '@ross2p/database': 'database',
 };
 
 for (const dep of ['dependencies', 'devDependencies', 'peerDependencies']) {

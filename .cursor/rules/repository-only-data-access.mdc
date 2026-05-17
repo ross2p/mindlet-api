@@ -1,0 +1,44 @@
+---
+description: Enforce that DatabaseService, CacheService, PrismaClient, and ioredis are only injected into repository files, never into services.
+globs: ["apps/**/*.service.ts"]
+alwaysApply: false
+---
+
+# Repository-Only Data Access
+
+`DatabaseService`, `CacheService`, `PrismaClient`, and `ioredis` (Redis) must **never** be imported or injected directly into a `*.service.ts` file.
+
+## Rule
+
+- **Allowed** in `*.repository.ts` and `*.module.ts` files.
+- **Forbidden** in `*.service.ts`, `*.controller.ts`, or any other file.
+
+## Why
+
+Services contain business logic. Repositories contain data-access logic. Mixing them creates untestable, tightly coupled code.
+
+## Correct pattern
+
+```typescript
+// session.repository.ts — OK
+@Injectable()
+export class SessionRepository {
+  constructor(private readonly db: DatabaseService) {}
+}
+
+// session.service.ts — OK (injects the repository, not the DB directly)
+@Injectable()
+export class SessionService {
+  constructor(private readonly sessionRepository: SessionRepository) {}
+}
+```
+
+## Incorrect pattern
+
+```typescript
+// session.service.ts — FORBIDDEN
+@Injectable()
+export class SessionService {
+  constructor(private readonly db: DatabaseService) {} // ← violation
+}
+```

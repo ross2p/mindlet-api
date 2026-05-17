@@ -16,7 +16,20 @@ Service repos are named `mindlet-<name>` (e.g. `mindlet-lesson`, `mindlet-course
 
 ## Shared library `@ross2p/common`
 
-`libs/common` includes Kafka service names (`Services` enum). Docker builds patch `@ross2p/*` to `file:../libs/*` via [`docker/nest-app.Dockerfile`](docker/nest-app.Dockerfile), so **you do not need to publish to npm** for local Compose builds.
+`libs/common` includes Kafka service names (`Services` enum). Docker builds patch `@ross2p/*` to `file:../libs/*` via [`docker/nest-app.Dockerfile`](docker/nest-app.Dockerfile) and [`docker/patch-ross2p-deps.js`](docker/patch-ross2p-deps.js), so **you do not need to publish to npm** for local Compose builds.
+
+## Local development (linked libs, no npm publish)
+
+Apps declare `@ross2p/common` and `@ross2p/types` as **`file:../../libs/...`** (npm installs from the local submodule directories; on npm 7+ this is typically a symlink to `libs/*`).
+
+1. From this directory, install root dev tooling once: `npm install`
+2. Build all libs and reinstall every app: `npm run dev:bootstrap` (or `bash tools/dev-bootstrap.sh`)
+3. In a second terminal, watch-rebuild both libs while you work: `npm run dev:watch-libs`
+4. In a third terminal, run a service: `cd apps/auth && npm run start:dev`
+
+Shared packages use **peerDependencies** for Nest and `@ross2p/*` so the host app supplies a single copy (avoids Nest DI issues). After changing **dependencies** inside a lib, run `npm install` again in affected apps.
+
+If you run `npm install` inside `libs/common` or `libs/types` and then see TypeScript errors about incompatible `NestExpressApplication` types, prune duplicate runtime Nest packages from that lib (same as bootstrap): remove only `node_modules/@nestjs/common`, `core`, `platform-express`, `microservices`, `swagger`, `config`, and `testing` under the lib — **not** the whole `@nestjs` folder (that would remove `@nestjs/cli`).
 
 To consume from npm in other environments, publish a new version from `libs/common` after changes:
 
@@ -43,7 +56,7 @@ docker compose up --build
 
 - **Kafka UI**: http://localhost:3000  
 - **Nginx gateway** (paths `/svc/<service>/…`): http://localhost:80  
-- **Services**: host ports `3002`–`3012` map to internal `3000`
+- **Services**: host ports `3002`–`3014` map to internal `3000`
 
 ## GitHub CLI
 
