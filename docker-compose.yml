@@ -359,6 +359,52 @@ services:
     networks:
       - app-network
 
+  storage:
+    image: minio/minio:latest
+    hostname: storage
+    command: server /data --console-address ":9001"
+    networks:
+      - app-network
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - ./.env
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - storage_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  storage-api:
+    build:
+      context: .
+      dockerfile: docker/nest-app.Dockerfile
+      args:
+        APP_DIR: apps/storage
+    ports:
+      - "3015:3000"
+    environment:
+      <<: *microservice_env
+      SERVICE_NAME: STORAGE_SERVICE
+      STORAGE_ENDPOINT: http://storage:9000
+      STORAGE_PUBLIC_URL: http://localhost:9000
+      STORAGE_REGION: us-east-1
+      STORAGE_ACCESS_KEY: ${STORAGE_ROOT_USER:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_ROOT_PASSWORD:-minioadmin}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    networks:
+      - app-network
+
   nginx:
     image: nginx:alpine
     ports:
@@ -378,6 +424,7 @@ services:
       - analytics
       - deck
       - test
+      - storage-api
     networks:
       - app-network
 
@@ -389,3 +436,4 @@ volumes:
   pg_data:
   mongo_data:
   redis_data:
+  storage_data:

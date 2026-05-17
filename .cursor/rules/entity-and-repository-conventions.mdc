@@ -1,0 +1,117 @@
+---
+description: Entity classes implement ORM row types; repositories stay thin — no manual row mapping, no default coalescing, pass DTO/data through to Prisma.
+globs: ["apps/**/*.entity.ts", "apps/**/*.repository.ts"]
+alwaysApply: false
+---
+
+# Entity and repository conventions
+
+## 1. Entity implements the ORM row type
+
+Domain entity classes used as API / service shapes should **implement** the generated model type so schema drift breaks compile-time.
+
+**Prisma (v7 `prisma-client` generator, output e.g. `generated/client`)**
+
+```typescript
+import type { Team } from '../../generated/client/client';
+
+export class TeamEntity implements Team {
+  // @ApiProperty… + fields matching Team
+}
+```
+
+**Drizzle (example)**
+
+```typescript
+import type { InferSelectModel } from 'drizzle-orm';
+import { teams } from './schema';
+
+export class TeamEntity implements InferSelectModel<typeof teams> {}
+```
+
+**Forbidden**: a free-standing entity with hand-listed fields that is not tied to `implements` / `InferSelectModel` when the source of truth is the ORM.
+
+---
+
+## 2. No `toEntity(row)` in repositories
+
+If the entity `implements` the Prisma `Team` (or equivalent), the `findUnique` / `create` / `update` / `delete` result **is already** a `TeamEntity`-compatible object. Do not map field-by-field.
+
+```typescript
+// BAD
+private toEntity(row: Team): TeamEntity {
+  return { id: row.id, name: row.name, /* … */ };
+}
+return row ? this.toEntity(row) : null;
+
+// GOOD
+return this.db.team.findUnique({ where: { id } });
+```
+
+---
+
+## 3. Finders: prefer direct return; name locals by domain
+
+Avoid `const row = await …` unless you need branching. Prefer `return await this.db.team.findUnique(…)`.
+
+If you need a local variable, use **`team`**, not `row`.
+
+```typescript
+// GOOD
+public findTeamById(id: string): Promise<TeamEntity | null> {
+  return this.db.team.findUnique({ where: { id } });
+}
+```
+
+---
+
+## 4. `create`: do not duplicate DB defaults in code
+
+Do not write `field: dto.field ?? null` or `isPublic: dto.isPublic ?? false` when the database already defines defaults (`@default`, optional columns → `NULL`).
+
+Put defaults in **`schema.prisma`** (or Drizzle schema), not in the repository.
+
+```typescript
+// BAD
+await this.db.team.create({
+  data: {
+    name: data.name,
+    description: data.description ?? null,
+    isPublic: data.isPublic ?? false,
+  },
+});
+
+// GOOD
+await this.db.team.create({ data });
+```
+
+Pair with [prisma-partial-update-fields.mdc](prisma-partial-update-fields.mdc) for semantics of `null` vs `undefined`.
+
+---
+
+## 5. `update`: do not rebuild `data` with per-field `undefined` checks
+
+Prisma treats **`undefined`** as “skip column” and **`null`** as “set NULL”. A validated `UpdateTeamDto` from `PartialType` already carries the right shape — pass it through.
+
+```typescript
+// BAD
+const updateData: Prisma.TeamUpdateInput = {};
+if (data.name !== undefined) updateData.name = data.name;
+// …
+
+// GOOD
+return this.db.team.update({ where: { id }, data });
+```
+
+---
+
+## 6. No empty-update fallback branches
+
+Do not add guards like `if (Object.keys(data).length === 0) return findUniqueOrThrow(…)` before `update`. Prisma handles empty `data` without extra repository logic.
+
+---
+
+## Cross-reference
+
+- [repository-no-business-logic.mdc](repository-no-business-logic.mdc) — policy stays in services; repositories stay persistence-only.
+- [repository-only-data-access.mdc](repository-only-data-access.mdc) — only repositories inject `DatabaseService` / `PrismaClient`.
