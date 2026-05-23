@@ -4,7 +4,8 @@
   "description": "Super-repo root scripts; apps and libs are git submodules.",
   "scripts": {
     "dev:bootstrap": "bash tools/dev-bootstrap.sh",
-    "dev:watch-libs": "bash tools/dev-watch-libs.sh"
+    "dev:watch-libs": "bash tools/dev-watch-libs.sh",
+    "render:deploy": "node tools/render-service-deploys.cjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

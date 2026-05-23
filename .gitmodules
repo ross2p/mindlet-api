@@ -37,3 +37,9 @@
 [submodule "apps/deck"]
 	path = apps/deck
 	url = https://github.com/ross2p/mindlet-deck.git
+[submodule "apps/storage"]
+	path = apps/storage
+	url = https://github.com/ross2p/mindlet-storage.git
+[submodule "apps/test"]
+	path = apps/test
+	url = https://github.com/ross2p/mindlet-test.git

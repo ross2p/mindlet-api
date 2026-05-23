@@ -1,0 +1,73 @@
+# Example only — not applied by default. Install Argo CD in the cluster, then:
+#   kubectl apply -f infra/platform/argocd/applicationset.yaml.example
+#
+# Update repo URLs and branches to match your org.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: mindlet-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - name: auth
+            repo: https://github.com/ross2p/mindlet-auth.git
+            path: deploy/overlays/prod
+          - name: user
+            repo: https://github.com/ross2p/mindlet-user.git
+            path: deploy/overlays/prod
+          - name: subscription
+            repo: https://github.com/ross2p/mindlet-subscription.git
+            path: deploy/overlays/prod
+          - name: payment
+            repo: https://github.com/ross2p/mindlet-payment.git
+            path: deploy/overlays/prod
+          - name: notification
+            repo: https://github.com/ross2p/mindlet-notification.git
+            path: deploy/overlays/prod
+          - name: course
+            repo: https://github.com/ross2p/mindlet-course.git
+            path: deploy/overlays/prod
+          - name: ai
+            repo: https://github.com/ross2p/mindlet-ai.git
+            path: deploy/overlays/prod
+          - name: team
+            repo: https://github.com/ross2p/mindlet-team.git
+            path: deploy/overlays/prod
+          - name: lesson
+            repo: https://github.com/ross2p/mindlet-lesson.git
+            path: deploy/overlays/prod
+          - name: analytics
+            repo: https://github.com/ross2p/mindlet-analytics.git
+            path: deploy/overlays/prod
+          - name: deck
+            repo: https://github.com/ross2p/mindlet-deck.git
+            path: deploy/overlays/prod
+          # test + storage live in mindlet-api repo (not separate remotes in this example):
+          - name: test
+            repo: https://github.com/ross2p/mindlet-api.git
+            path: apps/test/deploy/overlays/prod
+          - name: storage
+            repo: https://github.com/ross2p/mindlet-api.git
+            path: apps/storage/deploy/overlays/prod
+  template:
+    metadata:
+      name: "mindlet-{{.name}}"
+    spec:
+      project: default
+      source:
+        repoURL: "{{.repo}}"
+        targetRevision: HEAD
+        path: "{{.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: mindlet
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

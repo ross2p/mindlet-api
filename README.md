@@ -16,7 +16,7 @@ Service repos are named `mindlet-<name>` (e.g. `mindlet-lesson`, `mindlet-course
 
 ## Shared library `@ross2p/common`
 
-`libs/common` includes Kafka service names (`Services` enum). Docker builds patch `@ross2p/*` to `file:../libs/*` via [`docker/nest-app.Dockerfile`](docker/nest-app.Dockerfile) and [`docker/patch-ross2p-deps.js`](docker/patch-ross2p-deps.js), so **you do not need to publish to npm** for local Compose builds.
+`libs/common` includes Kafka service names (`Services` enum). Docker builds from the repo root use [`tools/docker/nest-monorepo.Dockerfile`](tools/docker/nest-monorepo.Dockerfile) and [`tools/docker/patch-ross2p-deps.js`](tools/docker/patch-ross2p-deps.js) to rewrite `@ross2p/*` to `file:../libs/*`, so **you do not need to publish to npm** for local Compose builds.
 
 ## Local development (linked libs, no npm publish)
 
@@ -47,6 +47,8 @@ npm install   # runs husky setup
 
 ## Docker Compose
 
+The root [`docker-compose.yml`](docker-compose.yml) uses **Compose `include:`** to merge [`infra/platform/compose.yaml`](infra/platform/compose.yaml) (Kafka + UI) with one fragment per app under `apps/<name>/compose.yaml`. Per-service Postgres/Redis/Mongo run beside that service.
+
 From this directory (Docker Desktop running):
 
 ```bash
@@ -55,8 +57,19 @@ docker compose up --build
 ```
 
 - **Kafka UI**: http://localhost:3000  
-- **Nginx gateway** (paths `/svc/<service>/…`): http://localhost:80  
-- **Services**: host ports `3002`–`3014` map to internal `3000`
+- **HTTP APIs**: each service is on host port `3002`–`3015` (see `apps/*/compose.yaml`). For path-based routing like `/svc/<name>/`, use **Kubernetes + Ingress** (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)).
+
+## Regenerate K8s / Compose fragments
+
+After editing service metadata in [`tools/render-service-deploys.cjs`](tools/render-service-deploys.cjs):
+
+```bash
+node tools/render-service-deploys.cjs
+```
+
+## Kubernetes (local)
+
+See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** and the platform contract **[docs/PLATFORM_CONTRACT.md](docs/PLATFORM_CONTRACT.md)**.
 
 ## GitHub CLI
 
