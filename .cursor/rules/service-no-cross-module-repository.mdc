@@ -1,0 +1,39 @@
+---
+description: Services must not inject repositories from other feature modules; use that module's service instead.
+globs: ["apps/**/*.service.ts"]
+alwaysApply: false
+---
+
+# No Cross-Module Repository Injection in Services
+
+A `*.service.ts` file must **not** import or inject a `*.repository.ts` that lives under a **different** feature folder than the service.
+
+## Rule
+
+- **Allowed**: inject repositories whose files sit next to the service (same feature folder), e.g. `session/session.service.ts` → `session/session.repository.ts`.
+- **Allowed**: inject other modules' **services** (e.g. `credentials/credentials.service.ts` → `two-factor/two-factor.service.ts`).
+- **Forbidden**: `credentials/credentials.service.ts` injecting `two-factor/two-factor.repository.ts` (or any repository from another feature folder).
+
+## Why
+
+Repositories are an internal persistence boundary of a feature. Another feature should depend on the **public API** of that feature (its service), not on how data is stored.
+
+## Bad example (fixed in codebase)
+
+`CredentialsService` previously injected persistence from the `two-factor` folder directly. The correct pattern is to inject `TwoFactorService` and let it own `TwoFactorRepository` (cache-only).
+
+## Correct pattern
+
+```typescript
+// credentials.service.ts — OK
+constructor(
+  private readonly twoFactorService: TwoFactorService,
+) {}
+```
+
+```typescript
+// two-factor/two-factor.service.ts — OK
+constructor(
+  private readonly twoFactorRepository: TwoFactorRepository,
+) {}
+```

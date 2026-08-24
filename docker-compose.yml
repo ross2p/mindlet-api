@@ -1,0 +1,17 @@
+# Mindlet local stack — paths are relative to this file.
+# Regenerate per-service fragments: node tools/render-service-deploys.cjs
+include:
+  - path: infra/platform/compose.yaml
+  - path: apps/auth/compose.yaml
+  - path: apps/user/compose.yaml
+  - path: apps/subscription/compose.yaml
+  - path: apps/payment/compose.yaml
+  - path: apps/notification/compose.yaml
+  - path: apps/course/compose.yaml
+  - path: apps/ai/compose.yaml
+  - path: apps/team/compose.yaml
+  - path: apps/lesson/compose.yaml
+  - path: apps/analytics/compose.yaml
+  - path: apps/deck/compose.yaml
+  - path: apps/test/compose.yaml
+  - path: apps/storage/compose.yaml

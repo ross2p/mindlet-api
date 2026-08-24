@@ -1,0 +1,99 @@
+---
+description: Enforce reuse of @ross2p/common helpers — @ClientInfo, @DataPayload, @IsPublic, checkExists, Services enum, and ClientService — instead of reinventing them.
+globs: ["apps/**/*.controller.ts", "apps/**/*.service.ts", "apps/**/*.repository.ts"]
+alwaysApply: false
+---
+
+# Use @ross2p/common Helpers
+
+`@ross2p/common` provides a set of primitives that must be used instead of custom re-implementations.
+
+## @ClientInfo() — IP and User-Agent extraction
+
+**Never** access `req.ip` or `req.headers['user-agent']` directly in controllers.
+
+```typescript
+// CORRECT
+import { ClientInfo, ClientInfoType } from '@ross2p/common';
+
+@Post('login')
+login(@Body() dto: LoginDto, @ClientInfo() info: ClientInfoType) {
+  return this.service.login({ ...dto, ipAddress: info.ip, userAgent: info.userAgent });
+}
+
+// FORBIDDEN
+login(@Req() req: Request) {
+  const ip = req.ip;             // ← use @ClientInfo() instead
+  const ua = req.headers['user-agent']; // ← use @ClientInfo() instead
+}
+```
+
+## @IsPublic() — public route bypass
+
+Mark routes that should not require authentication with `@IsPublic()` so `AuthGuard` skips them.
+
+```typescript
+import { IsPublic } from '@ross2p/common';
+
+@Post('login')
+@IsPublic()
+login(@Body() dto: LoginDto) { ... }
+```
+
+## @DataPayload() — Kafka message data extraction
+
+Every `@MessagePattern` handler must use `@DataPayload(new ValidationPipe(schema))` instead of `@Payload()`.
+
+```typescript
+import { AuthMessage, DataPayload, ValidationPipe } from '@ross2p/common';
+
+@MessagePattern(AuthMessage.USER_VALIDATE)
+validate(@DataPayload(new ValidationPipe(accessTokenSchema)) dto: AccessTokenDto) { ... }
+```
+
+## checkExists() — null-safety from repositories
+
+Replace manual null checks in repositories and services with `checkExists`.
+
+```typescript
+import { checkExists } from '@ross2p/common';
+
+// CORRECT
+const session = await checkExists(
+  this.db.session.findUnique({ where: { id } }),
+  'Session not found',
+);
+
+// FORBIDDEN
+const session = await this.db.session.findUnique({ where: { id } });
+if (!session) throw new NotFoundException('Session not found'); // ← use checkExists
+```
+
+## Services enum + ClientModule.register
+
+**Never** hardcode Kafka service tokens as strings.
+
+```typescript
+// CORRECT
+ClientModule.register(Services.USER, Services.NOTIFICATION)
+@Inject(Services.USER) private readonly userService: ClientService
+
+// FORBIDDEN
+ClientModule.register('USER_SERVICE')   // ← use Services.USER
+@Inject('USER_SERVICE') ...             // ← use Services.USER
+```
+
+## ClientService — no asKafkaClient
+
+`ClientService` already exposes `subscribeToResponseOf`, `connect`, and `emitEvent` directly. Never cast to `ClientKafka` or use `asKafkaClient`.
+
+```typescript
+// CORRECT
+await this.userService.subscribeToResponseOf(UserQuery.GET_BY_ID);
+await this.userService.connect();
+this.userService.emitEvent(AuthEvent.SESSION_STARTED, payload);
+
+// FORBIDDEN
+asKafkaClient(this.userService).connect(); // ← asKafkaClient is banned
+(this.userService as ClientKafka).connect(); // ← raw cast is banned
+```

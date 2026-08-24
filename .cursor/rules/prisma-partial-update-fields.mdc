@@ -1,0 +1,15 @@
+---
+description: Prisma partial updates — pass null vs undefined explicitly
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# Prisma partial updates
+
+When building `data` for `prisma.*.update` / `updateMany`:
+
+- Use **one object** with the fields you intend to change; do **not** use conditional spreads like `...(x != null ? { field: x } : {})` to skip keys.
+- If the business rule is “set column to NULL”, the value in the DTO/patch must be **`null`** so Prisma receives `null` and persists it.
+- If the business rule is “leave column unchanged”, the property must be **`undefined`** (omit the key or assign `undefined`) so Prisma does not touch that column.
+
+This keeps “clear field” vs “ignore field” unambiguous and avoids noisy spread chains.

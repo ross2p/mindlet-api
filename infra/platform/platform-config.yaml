@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: mindlet
+  labels:
+    app.kubernetes.io/part-of: mindlet
+data:
+  # In-cluster broker (same namespace as workloads)
+  KAFKA_BROKER: "kafka:9092"
+  LOG_FORMAT: "json"
+  SENTRY_ENV: "development"
+  # Set in overlay or leave empty; services may ignore if unused
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  # Public base URL for dev (browser + Swagger); override per environment
+  BASE_URL: "http://mindlet.localtest.me"

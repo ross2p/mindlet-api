@@ -1,0 +1,17 @@
+# Applies only to pods labeled mindlet.io/network-policy: default-deny-ingress.
+# Service deploy templates should add this label and a dedicated NetworkPolicy
+# allowing ingress from ingress-nginx and from other explicitly allowed sources.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress-opt-in
+  namespace: mindlet
+  labels:
+    app.kubernetes.io/part-of: mindlet
+spec:
+  podSelector:
+    matchLabels:
+      mindlet.io/network-policy: default-deny-ingress
+  policyTypes:
+    - Ingress
+  ingress: []
