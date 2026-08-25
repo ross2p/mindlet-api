@@ -1,5 +1,10 @@
-# Mindlet local stack — paths are relative to this file.
-# Regenerate per-service fragments: node tools/render-service-deploys.cjs
+# Mindlet API stack — paths are relative to mindlet-api/.
+# Included from mindlet-app/compose.yml. Regenerate: node tools/render-service-deploys.cjs
+#
+# Build (sequential npm ci to avoid registry timeouts):
+#   npm run docker:up
+# Or from monorepo root:
+#   bash mindlet-api/tools/docker-up-from-root.sh
 include:
   - path: infra/platform/compose.yaml
   - path: apps/auth/compose.yaml

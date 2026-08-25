@@ -8,19 +8,19 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 
 const SERVICES = [
-  { folder: 'auth', workload: 'auth', ingress: 'auth', envService: 'AUTH_SERVICE', hostPort: 3002, pg: true, redis: true, mongo: false, minio: false, prisma: true, db: 'mindlet_auth', extraSecret: { TWO_FACTOR_ENCRYPTION_KEY: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=' } },
-  { folder: 'user', workload: 'user', ingress: 'user', envService: 'USER_SERVICE', hostPort: 3003, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_user' },
-  { folder: 'subscription', workload: 'subscription', ingress: 'subscription', envService: 'SUBSCRIPTION_SERVICE', hostPort: 3005, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
-  { folder: 'payment', workload: 'payment', ingress: 'payment', envService: 'PAYMENT_SERVICE', hostPort: 3006, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null, paymentMinimal: true },
-  { folder: 'notification', workload: 'notification', ingress: 'notification', envService: 'NOTIFICATION_SERVICE', hostPort: 3007, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
-  { folder: 'course', workload: 'course', ingress: 'course', envService: 'COURSE_SERVICE', hostPort: 3008, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_course' },
-  { folder: 'ai', workload: 'ai', ingress: 'ai', envService: 'AI_SERVICE', hostPort: 3009, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null, extraSecret: { OPENAI_API_KEY: '' } },
-  { folder: 'team', workload: 'team', ingress: 'team', envService: 'TEAM_SERVICE', hostPort: 3010, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_team' },
-  { folder: 'lesson', workload: 'lesson', ingress: 'lesson', envService: 'LESSON_SERVICE', hostPort: 3011, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_lesson' },
-  { folder: 'analytics', workload: 'analytics', ingress: 'analytics', envService: 'ANALYTICS_SERVICE', hostPort: 3012, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
-  { folder: 'deck', workload: 'deck', ingress: 'deck', envService: 'DECK_SERVICE', hostPort: 3013, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_deck' },
-  { folder: 'test', workload: 'test', ingress: 'test', envService: 'TEST_SERVICE', hostPort: 3014, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_test' },
-  { folder: 'storage', workload: 'storage-api', ingress: 'storage', envService: 'STORAGE_SERVICE', hostPort: 3015, pg: false, redis: false, mongo: false, minio: true, prisma: false, db: null, storageApi: true },
+  { folder: 'auth', workload: 'auth', ingress: 'auth', envService: 'AUTH_SERVICE', hostPort: 4002, dbHostPort: 5433, pg: true, redis: true, mongo: false, minio: false, prisma: true, db: 'mindlet_auth', extraSecret: { TWO_FACTOR_ENCRYPTION_KEY: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=' } },
+  { folder: 'user', workload: 'user', ingress: 'user', envService: 'USER_SERVICE', hostPort: 4003, dbHostPort: 5434, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_user' },
+  { folder: 'subscription', workload: 'subscription', ingress: 'subscription', envService: 'SUBSCRIPTION_SERVICE', hostPort: 4005, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
+  { folder: 'payment', workload: 'payment', ingress: 'payment', envService: 'PAYMENT_SERVICE', hostPort: 4006, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null, paymentMinimal: true },
+  { folder: 'notification', workload: 'notification', ingress: 'notification', envService: 'NOTIFICATION_SERVICE', hostPort: 4007, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
+  { folder: 'course', workload: 'course', ingress: 'course', envService: 'COURSE_SERVICE', hostPort: 4008, dbHostPort: 5435, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_course' },
+  { folder: 'ai', workload: 'ai', ingress: 'ai', envService: 'AI_SERVICE', hostPort: 4009, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null, extraSecret: { OPENAI_API_KEY: '' } },
+  { folder: 'team', workload: 'team', ingress: 'team', envService: 'TEAM_SERVICE', hostPort: 4010, dbHostPort: 5436, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_team' },
+  { folder: 'lesson', workload: 'lesson', ingress: 'lesson', envService: 'LESSON_SERVICE', hostPort: 4011, dbHostPort: 5437, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_lesson' },
+  { folder: 'analytics', workload: 'analytics', ingress: 'analytics', envService: 'ANALYTICS_SERVICE', hostPort: 4012, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
+  { folder: 'deck', workload: 'deck', ingress: 'deck', envService: 'DECK_SERVICE', hostPort: 4013, dbHostPort: 5438, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_deck' },
+  { folder: 'test', workload: 'test', ingress: 'test', envService: 'TEST_SERVICE', hostPort: 4014, dbHostPort: 5439, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_test' },
+  { folder: 'storage', workload: 'storage-api', ingress: 'storage', envService: 'STORAGE_SERVICE', hostPort: 4015, pg: false, redis: false, mongo: false, minio: true, prisma: false, db: null, storageApi: true },
 ];
 
 function write(rel, content) {
@@ -755,6 +755,29 @@ paths: {}
 `;
 }
 
+function composeBuildYaml(s, { target } = {}) {
+  const targetLine = target ? `\n      target: ${target}` : '';
+  return `    build:
+      context: .
+      dockerfile: Dockerfile${targetLine}`;
+}
+
+function dockerignore() {
+  return `node_modules
+
+dist
+build
+
+*.log
+
+.vscode
+.idea
+
+.git
+.gitignore
+`;
+}
+
 function composeFragment(s) {
   const prefix = s.folder;
   const serviceName = `${prefix}-service`;
@@ -772,18 +795,18 @@ function composeFragment(s) {
   const blocks = [];
   const volumes = [];
   const serviceDepends = [];
-  const envLines = [];
+  const envLines = ['      KAFKA_BROKER: ${KAFKA_BROKER:-kafka:29092}'];
 
   if (s.pg) {
     blocks.push(`  ${dbName}:
     image: postgres:17
     hostname: ${dbHostname}
     ports:
-      - "\${DATABASE_PORT:-5432}:5432"
+      - "\${DATABASE_PORT:-${s.dbHostPort}}:5432"
     environment:
-      POSTGRES_USER: \${DATABASE_USERNAME}
-      POSTGRES_PASSWORD: \${DATABASE_PASSWORD}
-      POSTGRES_DB: \${DATABASE_NAME}
+      POSTGRES_USER: \${DATABASE_USERNAME:-mindlet}
+      POSTGRES_PASSWORD: \${DATABASE_PASSWORD:-mindlet}
+      POSTGRES_DB: \${DATABASE_NAME:-${s.db}}
       PGDATA: /var/lib/postgresql/data/pgdata
     env_file:
       - ./.env
@@ -792,7 +815,7 @@ function composeFragment(s) {
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \${DATABASE_USERNAME} -d \${DATABASE_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U \${DATABASE_USERNAME:-mindlet} -d \${DATABASE_NAME:-${s.db}}"]
       interval: 10s
       timeout: 5s
       retries: 5`);
@@ -801,7 +824,7 @@ function composeFragment(s) {
     envLines.push(
       `      DATABASE_HOST: ${dbHostname}`,
       '      DATABASE_PORT: 5432',
-      `      DATABASE_URL: postgresql://\${DATABASE_USERNAME}:\${DATABASE_PASSWORD}@${dbHostname}:5432/\${DATABASE_NAME}?schema=public`
+      `      DATABASE_URL: postgresql://\${DATABASE_USERNAME:-mindlet}:\${DATABASE_PASSWORD:-mindlet}@${dbHostname}:5432/\${DATABASE_NAME:-${s.db}}?schema=public`
     );
   }
 
@@ -864,15 +887,12 @@ function composeFragment(s) {
 
   if (s.prisma && s.pg) {
     blocks.push(`  ${migratorName}:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
+${composeBuildYaml(s, { target: 'builder' })}
     command: npx prisma migrate deploy
     env_file:
       - ./.env
     environment:
-      DATABASE_URL: postgresql://\${DATABASE_USERNAME}:\${DATABASE_PASSWORD}@${dbHostname}:5432/\${DATABASE_NAME}?schema=public
+      DATABASE_URL: postgresql://\${DATABASE_USERNAME:-mindlet}:\${DATABASE_PASSWORD:-mindlet}@${dbHostname}:5432/\${DATABASE_NAME:-${s.db}}?schema=public
     depends_on:
       ${dbName}:
         condition: service_healthy
@@ -887,8 +907,7 @@ function composeFragment(s) {
     envLines.length > 0 ? `\n    environment:\n${envLines.join('\n')}` : '';
 
   blocks.push(`  ${serviceName}:
-    build:
-      dockerfile: Dockerfile
+${composeBuildYaml(s)}
     hostname: ${serviceName}
     ports:
       - "\${BACKEND_PORT:-${s.hostPort}}:3000"
@@ -979,6 +998,7 @@ images:
   if (!fs.existsSync(path.join(ROOT, ev))) write(ev, contracts(s));
   if (!fs.existsSync(path.join(ROOT, api))) write(api, openapi(s));
   write(`apps/${s.folder}/compose.yaml`, composeFragment(s));
+  write(`apps/${s.folder}/.dockerignore`, dockerignore());
 }
 
 const platformCompose = `services:
@@ -987,6 +1007,8 @@ const platformCompose = `services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD", "bash", "-c", "nc -z localhost 2181"]
       interval: 10s
@@ -1009,6 +1031,8 @@ const platformCompose = `services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD", "bash", "-c", "nc -z localhost 9092"]
       interval: 10s
@@ -1025,6 +1049,12 @@ const platformCompose = `services:
     depends_on:
       kafka:
         condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 `;
 
 write('infra/platform/compose.yaml', platformCompose);
@@ -1034,9 +1064,9 @@ for (const s of SERVICES) {
   includeLines.push(`  - path: apps/${s.folder}/compose.yaml`);
 }
 write(
-  'docker-compose.yml',
-  `# Mindlet local stack — paths are relative to this file.
-# Regenerate per-service fragments: node tools/render-service-deploys.cjs
+  'compose.stack.yaml',
+  `# Mindlet API stack — paths are relative to mindlet-api/.
+# Included from mindlet-app/compose.yml. Regenerate: node tools/render-service-deploys.cjs
 include:
 ${includeLines.join('\n')}
 `

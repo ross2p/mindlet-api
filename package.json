@@ -5,7 +5,8 @@
   "scripts": {
     "dev:bootstrap": "bash tools/dev-bootstrap.sh",
     "dev:watch-libs": "bash tools/dev-watch-libs.sh",
-    "render:deploy": "node tools/render-service-deploys.cjs"
+    "render:deploy": "node tools/render-service-deploys.cjs",
+    "docker:up": "bash tools/docker-up.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

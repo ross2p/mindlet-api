@@ -54,7 +54,7 @@ Under the service repository root:
 ## Build and image naming (local / CI)
 
 - Image name convention: `mindlet-\<service\>:\<tag\>` (e.g. `mindlet-auth:dev`).
-- Docker Compose in meta-repo builds from repository root using `tools/docker/nest-monorepo.Dockerfile` with `APP_DIR=apps/\<service\>` where applicable.
+- Docker Compose builds each service from `apps/\<service\>/` using that repo’s `Dockerfile` (`npm ci` + `npm run build` in the service directory).
 
 ## Compliance checklist (service team)
 

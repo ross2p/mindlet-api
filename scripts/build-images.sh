@@ -15,11 +15,7 @@ build_one() {
   local tag="$2"
   local root="$3"
   cd "${root}"
-  if [[ "${service}" == "payment" ]]; then
-    docker build -f tools/docker/payment-monorepo.Dockerfile -t "mindlet-${service}:${tag}" .
-  else
-    docker build -f tools/docker/nest-monorepo.Dockerfile --build-arg "APP_DIR=apps/${service}" -t "mindlet-${service}:${tag}" .
-  fi
+  docker build -f "apps/${service}/Dockerfile" -t "mindlet-${service}:${tag}" "apps/${service}"
   if command -v kind &>/dev/null; then
     kind load docker-image "mindlet-${service}:${tag}" --name "${CLUSTER_NAME}"
   fi
