@@ -43,3 +43,6 @@
 [submodule "apps/test"]
 	path = apps/test
 	url = https://github.com/ross2p/mindlet-test.git
+[submodule "apps/gateway-web"]
+	path = apps/gateway-web
+	url = https://github.com/ross2p/mindlet-api-gateway-web.git
