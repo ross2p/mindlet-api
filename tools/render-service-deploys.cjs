@@ -21,6 +21,7 @@ const SERVICES = [
   { folder: 'deck', workload: 'deck', ingress: 'deck', envService: 'DECK_SERVICE', hostPort: 4013, dbHostPort: 5438, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_deck' },
   { folder: 'test', workload: 'test', ingress: 'test', envService: 'TEST_SERVICE', hostPort: 4014, dbHostPort: 5439, pg: true, redis: false, mongo: false, minio: false, prisma: true, db: 'mindlet_test' },
   { folder: 'storage', workload: 'storage-api', ingress: 'storage', envService: 'STORAGE_SERVICE', hostPort: 4015, pg: false, redis: false, mongo: false, minio: true, prisma: false, db: null, storageApi: true },
+  { folder: 'gateway-web', workload: 'gateway-web', ingress: 'gateway-web', envService: 'GATEWAY_WEB_SERVICE', hostPort: 4016, pg: false, redis: false, mongo: false, minio: false, prisma: false, db: null },
 ];
 
 function write(rel, content) {

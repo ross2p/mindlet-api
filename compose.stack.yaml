@@ -20,3 +20,4 @@ include:
   - path: apps/deck/compose.yaml
   - path: apps/test/compose.yaml
   - path: apps/storage/compose.yaml
+  - path: apps/gateway-web/compose.yaml
