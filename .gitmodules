@@ -46,3 +46,6 @@
 [submodule "apps/gateway-web"]
 	path = apps/gateway-web
 	url = https://github.com/ross2p/mindlet-api-gateway-web.git
+[submodule "apps/video-processor"]
+	path = apps/video-processor
+	url = https://github.com/ross2p/mindlet-video-processor.git
