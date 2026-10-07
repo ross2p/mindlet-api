@@ -338,23 +338,26 @@ const session = await this.db.session.findUnique({ where: { id } });
 if (!session) throw new NotFoundException('Session not found'); // ← use checkExists
 ```
 
-### `Services` enum + `ClientModule.register`
+### `Services` enum + `EventClientModule.register`
 
 **Never** hardcode Kafka service tokens as strings.
 
 ```typescript
 // CORRECT
-ClientModule.register(Services.USER, Services.NOTIFICATION)
-@Inject(Services.USER) private readonly userService: ClientService
+EventClientModule.register(Services.USER, Services.NOTIFICATION)
+@Inject(Services.USER) private readonly userService: EventClientService
 
 // FORBIDDEN
-ClientModule.register('USER_SERVICE')   // ← use Services.USER
+EventClientModule.register('USER_SERVICE')   // ← use Services.USER
 @Inject('USER_SERVICE') ...             // ← use Services.USER
 ```
 
-### `ClientService` — no `asKafkaClient`
+### `EventClientService` — no `asKafkaClient`
 
-`ClientService` already exposes `subscribeToResponseOf`, `connect`, and `emitEvent` directly.
+`EventClientService` (formerly `ClientService` — renamed as services migrate their synchronous
+RPC to gRPC and this class's remaining role narrows to fire-and-forget events; some `Services`
+tokens still route `sendAndReturnPromise` through it until their service migrates) already
+exposes `subscribeToResponseOf`, `connect`, and `emitEvent` directly.
 Never cast to `ClientKafka` or use `asKafkaClient`.
 
 ```typescript
