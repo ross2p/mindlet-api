@@ -20,7 +20,7 @@ so schema drift breaks compile-time.
 import type { Team } from '../../generated/client/client';
 
 export class TeamEntity implements Team {
-  // @ApiProperty… + fields matching Team
+  // fields matching Team (no Swagger decorators in microservices — see gRPC section below)
 }
 ```
 
@@ -35,6 +35,12 @@ export class TeamEntity implements InferSelectModel<typeof teams> {}
 
 **Forbidden**: a free-standing entity with hand-listed fields that is not tied to `implements` /
 `InferSelectModel` when the source of truth is the ORM.
+
+**Enum columns**: Prisma returns enums as string-literal unions, while gRPC handlers must return the
+generated proto enums (same values, nominally different types). Type the entity field with the proto
+enum (`status!: CourseCoreProto.CourseStatus`) and assert the Prisma result **once, in the repository**
+(`return this.db.course.findUnique(...) as Promise<CourseEntity | null>`), with a comment saying why.
+Do not add `toXxxMessage()` / `as Proto.Enum` mappers in controllers or services.
 
 ### 2. No `toEntity(row)` in repositories
 
@@ -203,7 +209,7 @@ export class SessionService {
 
 ## `@ResponseMessage` on every HTTP endpoint
 
-_Applies to: `apps/**/*.controller.ts`_
+_Applies to: `apps/gateway-web/**/*.controller.ts` — the only app with HTTP routes; domain microservices serve gRPC._
 
 Every HTTP route handler (`@Get`, `@Post`, `@Put`, `@Patch`, `@Delete`) **must** be decorated with
 `@ResponseMessage('…')` from `@ross2p/common`.
@@ -308,17 +314,67 @@ import { IsPublic } from '@ross2p/common';
 login(@Body() dto: LoginDto) { ... }
 ```
 
-### `@DataPayload()` — Kafka message data extraction
+### gRPC handlers — `@GrpcMethod`, typed requests, no mappers
 
-Every `@MessagePattern` handler must use `@DataPayload(new ValidationPipe(schema))` instead of
-`@Payload()`.
+Synchronous RPC between services is **gRPC**; Kafka carries only fire-and-forget events. Contracts
+live in `libs/common/src/protos/<service>/*.proto` (ts-proto generates the types; a hand-written
+`index.ts` barrel exports them as `CourseCoreProto`, `TeamRoleProto`, …). Each service has a
+`<SERVICE>_GRPC_*` config in `libs/common/src/configs` and serves it from `main.ts` (ports 50051+).
+
+A controller **implements the generated `*ServiceController` interface** and binds each method
+explicitly. It validates at the boundary with the Joi schema from `@ross2p/types`, then delegates —
+no business logic, no mapping functions:
 
 ```typescript
-import { AuthMessage, DataPayload, ValidationPipe } from '@ross2p/common';
+@Controller()
+export class CourseController implements CourseCoreProto.CourseServiceController {
+  constructor(private readonly courseService: CourseService) {}
 
-@MessagePattern(AuthMessage.USER_VALIDATE)
-validate(@DataPayload(new ValidationPipe(accessTokenSchema)) dto: AccessTokenDto) { ... }
+  @GrpcMethod('CourseService', 'findCourseById')
+  public findCourseById(request: CourseCoreProto.CourseIdRequest): Promise<CourseCoreProto.CourseMessage> {
+    const { courseId } = new ValidationPipe<CourseIdQueryDto>(courseIdQuerySchema).transform(request);
+    return this.courseService.findCourseByIdOrThrow(courseId);
+  }
+}
 ```
+
+Conventions that keep the contract honest:
+
+- **Optional fields** are `optional` in the `.proto`; the generated TS type is `T | null | undefined`,
+  so normalise with `request.x ?? undefined` before validation. Responses use wrapper types
+  (`google.protobuf.StringValue`, …) for nullable columns.
+- **Clearing a nullable column** cannot be expressed by omission: strings use `""` as the "set NULL"
+  sentinel; numbers, booleans and dates use an explicit `clearX` flag; arrays use a wrapper message
+  (`TagList`). Document the rule in a comment above the message in the `.proto`.
+- **Enums** are real proto enums. Converting a string-literal union (from `@ross2p/types`) to the enum
+  is a key lookup — `CourseCoreProto.CourseStatus[dto.status]` — never `as`. Enum member names must
+  match the existing values; if a value is not a valid identifier (e.g. `'1-10'`), keep it a validated
+  string.
+- **Dates** are `google.protobuf.Timestamp` → `Date | null` in generated types (proto3 message fields
+  always carry presence). Services keep using the strict `Date` types from `@ross2p/types`.
+- **Don't** put `class-validator`/Swagger decorators or class DTOs in microservices; request/response
+  shapes are the proto types plus plain `type` aliases. Update requests are validated as
+  `id` schema + changes schema separately (a `.concat(...)` of schemas that use `.custom` breaks).
+- **Event handlers** (`@EventPattern`) still use `@DataPayload()` with `@ross2p/common`'s
+  `ValidationPipe`.
+- **Large payloads**: gRPC's default 4 MiB message limit is below the storage upload cap, so storage
+  raises `maxReceiveMessageLength`/`maxSendMessageLength` (`STORAGE_GRPC_MAX_MESSAGE_BYTES`) on both
+  ends. Do the same for any new endpoint that moves files.
+
+Callers use a typed client, never `EventClientService`:
+
+```typescript
+// <consumer>/<domain>-client/<domain>-grpc-client.module.ts — one transport per proto package list
+new GrpcClientService({ package: COURSE_GRPC_PACKAGES, protoPath: COURSE_GRPC_PROTO_PATHS,
+  loader: COURSE_GRPC_LOADER_OPTIONS, url: config.get('COURSE_GRPC_URL') ?? 'course-service:50053' });
+// <domain>-grpc.client.ts — getService<…ServiceClient>('CourseService'), methods = firstValueFrom(...)
+```
+
+`GrpcClientService` rebuilds errors as `HttpException`, so callers see the same exceptions as before.
+After adding a service: register its `.proto` directory in `libs/common/nest-cli.json` `assets`
+(otherwise the files are missing from `dist`), add `@grpc/grpc-js` + `@grpc/proto-loader` to the
+service, expose the port in its Dockerfile / Deployment / Service / NetworkPolicy, and add the
+`<SERVICE>_GRPC_URL` to each consumer's `.env.example`.
 
 ### `checkExists()` — null-safety from repositories
 
@@ -338,35 +394,26 @@ const session = await this.db.session.findUnique({ where: { id } });
 if (!session) throw new NotFoundException('Session not found'); // ← use checkExists
 ```
 
-### `Services` enum + `EventClientModule.register`
+### `Services` enum + `EventClientModule.register` — events only
 
-**Never** hardcode Kafka service tokens as strings.
+`EventClientModule.register(Services.X)` + `EventClientService` is for **fire-and-forget Kafka events**
+(`emitEvent(AuthEvent.SESSION_STARTED, payload)`). **Never** hardcode Kafka service tokens as strings.
 
 ```typescript
 // CORRECT
-EventClientModule.register(Services.USER, Services.NOTIFICATION)
+EventClientModule.register(Services.USER)
 @Inject(Services.USER) private readonly userService: EventClientService
-
-// FORBIDDEN
-EventClientModule.register('USER_SERVICE')   // ← use Services.USER
-@Inject('USER_SERVICE') ...             // ← use Services.USER
-```
-
-### `EventClientService` — no `asKafkaClient`
-
-`EventClientService` (formerly `ClientService` — renamed as services migrate their synchronous
-RPC to gRPC and this class's remaining role narrows to fire-and-forget events; some `Services`
-tokens still route `sendAndReturnPromise` through it until their service migrates) already
-exposes `subscribeToResponseOf`, `connect`, and `emitEvent` directly.
-Never cast to `ClientKafka` or use `asKafkaClient`.
-
-```typescript
-// CORRECT
-await this.userService.subscribeToResponseOf(UserQuery.GET_BY_ID);
-await this.userService.connect();
 this.userService.emitEvent(AuthEvent.SESSION_STARTED, payload);
 
 // FORBIDDEN
-asKafkaClient(this.userService).connect(); // ← asKafkaClient is banned
-(this.userService as ClientKafka).connect(); // ← raw cast is banned
+EventClientModule.register('USER_SERVICE')   // ← use Services.USER
+@Inject('USER_SERVICE') ...                  // ← use Services.USER
+this.userService.sendAndReturnPromise(...)   // ← new RPC goes over gRPC, not Kafka request/reply
 ```
+
+Never cast to `ClientKafka` or use `asKafkaClient`; `EventClientService` already exposes
+`connect` and `emitEvent`.
+
+Known remaining Kafka request/reply (not yet on gRPC): `auth.user.validate` used by `AuthGuard` /
+`OptionalAuthGuard` in `libs/common`, notification → user (`UserQuery.GET_BY_ID`), and the legacy
+`@MessagePattern` handlers kept in the user service. Don't add new ones.

@@ -1,14 +1,15 @@
 ---
 name: dto-types-and-swagger
-description: Rules for creating new TypeScript interfaces, classes, types, entities, and DTOs in the mindlet-api codebase, plus Swagger (`@nestjs/swagger`) annotation conventions for request/response DTOs. Use whenever adding or modifying an `interface`, `class`, `type` alias, `*.dto.ts`, `*.entity.ts`, or `*.type.ts` file, or when touching `@ApiProperty` / `@ApiPropertyOptional` decorators.
+description: Rules for creating new TypeScript types, entities and DTOs in the mindlet-api codebase — where they live, when to use a `type` instead of a class, and when Swagger (`@nestjs/swagger`) applies (gateway-web HTTP only; domain microservices are gRPC and use proto types). Use whenever adding or modifying an `interface`, `class`, `type` alias, `*.dto.ts`, `*.entity.ts`, or `*.type.ts` file, or when touching `@ApiProperty` / `@ApiPropertyOptional` decorators.
 ---
 
 # DTO / Type Placement and Swagger Conventions
 
-Two hard rules govern every new type in this repo:
+Three rules govern every new type in this repo:
 
 1. **Where it lives** — types are forbidden inside service/repository/controller files.
-2. **How it's documented** — request/response DTOs require Swagger annotations following the patterns below.
+2. **Class or type** — in domain microservices (gRPC) prefer plain `type` aliases and the generated proto types; classes only when they carry behaviour.
+3. **How it's documented** — Swagger annotations apply **only to `gateway-web` HTTP DTOs/entities**. Microservices have no HTTP surface and no Swagger; their contract is the `.proto`.
 
 ---
 
@@ -40,6 +41,8 @@ All shared/domain types live under `libs/types/src/types/<domain>/`, one declara
 
 After creating the file, export it from the domain `index.ts` (and ensure the domain is re-exported from `libs/types/src/types/index.ts`).
 
+Types used by **one** service only live in that module's `types/` folder (`apps/<app>/src/<module>/types/`, not `dto/`/`dtos/`), still one declaration per file. A type that mirrors a shape already in `@ross2p/types` must not be redeclared — import it.
+
 ### Decision flow
 
 1. About to declare a `class` / `interface` / `type` / `enum`?
@@ -50,9 +53,19 @@ After creating the file, export it from the domain `index.ts` (and ensure the do
 
 ---
 
-## Rule 2 — Swagger annotations for request/response DTOs
+## Rule 2 — Type aliases over classes in microservices
 
-If a DTO (or any nested object inside it) participates in an HTTP **request** or **response**, every property must carry a Swagger decorator. Nested object types must follow the same rules recursively.
+Domain microservices (auth, user, course, deck, team, lesson, test, subscription, notification, storage) are validated by Joi at the gRPC boundary and have no decorator metadata to carry, so:
+
+- Use `export type Foo = { … }` (or an intersection/`Partial`/`Omit` of existing types), not `class Foo {}` with `!` fields.
+- Keep a class only when it has behaviour (e.g. a paging helper with `skip`/`take` getters).
+- Request/response shapes are the generated proto types (`CourseCoreProto.CourseMessage`); do not declare parallel DTOs for them.
+- Where a service needs the proto **enum** (`TokenType`, `CourseStatus`, …), model it with the enum type from `@ross2p/common` rather than a string union, so handlers return service results without casts.
+- No `class-validator`, no `@nestjs/swagger` (including `PartialType` — use `Partial<T>`).
+
+## Rule 3 — Swagger annotations for gateway-web HTTP DTOs
+
+This rule applies to `apps/gateway-web` only. If a DTO (or any nested object inside it) participates in an HTTP **request** or **response**, every property must carry a Swagger decorator. Nested object types must follow the same rules recursively.
 
 ### Choosing the decorator
 
@@ -181,7 +194,8 @@ Before finishing the change, verify:
 
 - [ ] No `class` / `interface` / `type` / `enum` was declared in a service, repository, controller, module, guard, strategy, interceptor, pipe, or mapper file.
 - [ ] New types live under `libs/types/src/types/<domain>/` with the correct suffix and are exported from the domain `index.ts`.
-- [ ] Every property of every request/response DTO (and every nested DTO) has a Swagger decorator.
+- [ ] (gateway-web only) Every property of every request/response DTO (and every nested DTO) has a Swagger decorator.
+- [ ] (microservices) New shapes are `type` aliases or proto types — no Swagger, no `class-validator`, no duplicated `@ross2p/types` shapes.
 - [ ] Every Swagger decorator has a `description`.
 - [ ] Optional (`undefined`) fields use `@ApiPropertyOptional`.
 - [ ] Nullable (`null`) fields pass `nullable: true`.
