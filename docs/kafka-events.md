@@ -1,6 +1,6 @@
 # Kafka messaging catalog (`mindlet-api`)
 
-Single reference for **Kafka traffic between Mindlet microservices**: synchronous **Commands** (request/reply) and asynchronous **Events** (publish/subscribe). Planned rows describe the target architecture aligned with [bounded contexts](../../docs/02-domain-model.md).
+Single reference for **Kafka traffic between Mindlet microservices**: asynchronous **Events** (publish/subscribe). > **Note:** synchronous request/reply (**Commands**) has moved to **gRPC** — contracts are the `.proto` files in `libs/common/src/protos/` (see `CLAUDE.md`, section "gRPC handlers"). Only `auth.user.validate` (used by `AuthGuard`), notification → user lookups and the legacy user-service handlers still use Kafka request/reply; the **Commands** rows below describe those and the pre-migration history, not the target design. Planned rows describe the target architecture aligned with [bounded contexts](../../docs/02-domain-model.md).
 
 ---
 
@@ -10,7 +10,7 @@ Single reference for **Kafka traffic between Mindlet microservices**: synchronou
 |-------|--------|
 | **Transport** | NestJS microservices over Kafka: [`create-client.config.ts`](../libs/common/src/configs/create-client.config.ts), [`micro-service-application.config.ts`](../libs/common/src/configs/micro-service-application.config.ts). |
 | **Envelope** | Every outbound message is wrapped by [`ClientService`](../libs/common/src/modules/client/client.service.ts) as `{ data, traceId?, timestamp, messageId, expiresAt? }` — see [`MessagePayload<T>`](../libs/common/src/types/message.payload.ts). RPC handlers unwrap `data` via `@DataPayload`. |
-| **Commands** | `@MessagePattern` + `client.send()` / `sendAndReturnPromise()` — one consumer replies; caller waits. |
+| **Commands** | `@MessagePattern` + `client.send()` / `sendAndReturnPromise()` — one consumer replies; caller waits. **Legacy: new synchronous calls use gRPC instead.** |
 | **Events** | `@EventPattern` + `client.emit()` — zero or many consumers; no reply (planned usage). |
 | **Pattern / topic naming** | Prefer `<context>.<resource>.<verb>` (e.g. `course.enrollment.created`). Use stable enums under `libs/common/src/enums/messages/` when adding commands. |
 | **Identity** | Each service uses a dedicated Kafka `clientId` and consumer `groupId` — see [Services map](#services-map). |

@@ -1,11 +1,44 @@
 ---
 name: create-nest-resource
-description: Scaffold a complete, scalable NestJS resource (module, controller, service, repository, entity, DTOs, optional mapper/enums) following strict folder, naming and architectural conventions of this project. Use when the user asks to create a new NestJS resource, module, feature, entity, CRUD, or scaffold something like "create resource for Product", "generate NestJS module for X", or mentions creating controller/service/repository for a new entity.
+description: Scaffold a complete, scalable NestJS resource (module, controller, service, repository, entity, types, optional mapper/enums) following strict folder, naming and architectural conventions of this project — a gRPC resource in a domain microservice, or an HTTP resource in gateway-web. Use when the user asks to create a new NestJS resource, module, feature, entity, CRUD, or scaffold something like "create resource for Product", "generate NestJS module for X", or mentions creating controller/service/repository for a new entity.
 ---
 
 # Create NestJS Resource (Module, Controller, Service, Repository)
 
 Generates a complete, scalable NestJS resource block in this project, following strict architectural and naming conventions.
+
+## Pick the flavour first
+
+| Where | Transport | Controller | Types / docs |
+|---|---|---|---|
+| Domain microservice (`apps/auth`, `user`, `course`, `deck`, `team`, `lesson`, `test`, `subscription`, `notification`, `storage`) | **gRPC** | `@GrpcMethod`, `implements <X>ServiceController` | proto contract + `type` aliases; **no Swagger, no class-validator** |
+| `apps/gateway-web` | HTTP (REST) | `@Get/@Post…` + `@ResponseMessage` | class DTOs with Swagger decorators; calls the service through a typed gRPC client |
+
+The **gateway-web** template further down (sections 2, 6–8) is the HTTP flavour. For a **microservice** resource use the gRPC controller below and skip every Swagger/`class-validator` instruction in this file.
+
+### Microservice (gRPC) resource
+
+1. Add the contract in `libs/common/src/protos/<service>/<entity>.proto` (service `NameEntityService`, request messages with `optional` fields and the clear-conventions from `CLAUDE.md`, `*Message` responses with wrapper types for nullable columns), export it from that folder's `index.ts` barrel, add it to `<SERVICE>_GRPC_DOMAINS`, make sure `libs/common/nest-cli.json` copies the directory, then `npm run build` in `libs/common`.
+2. Controller (no business logic, no mapping functions, no Swagger):
+
+```typescript
+@Controller()
+export class NameEntityController implements NameServiceProto.NameEntityServiceController {
+  constructor(private readonly nameEntityService: NameEntityService) {}
+
+  @GrpcMethod('NameEntityService', 'findNameEntityById')
+  public findNameEntityById(
+    request: NameServiceProto.NameEntityIdRequest,
+  ): Promise<NameServiceProto.NameEntityMessage> {
+    const { nameEntityId } = new ValidationPipe<NameEntityIdQueryDto>(nameEntityIdQuerySchema).transform(request);
+    return this.nameEntityService.findNameEntityByIdOrThrow(nameEntityId);
+  }
+}
+```
+
+3. Entity `implements` the Prisma row type; enum columns are typed with the proto enum and the repository asserts the Prisma result once (see `CLAUDE.md`). Request shapes are `type` aliases in `<module>/types/`, never classes with decorators.
+4. Serve it: `GrpcOptions` in `main.ts` (`<SERVICE>_GRPC_URL`, next free port), `@grpc/grpc-js` + `@grpc/proto-loader` in `package.json`, port in Dockerfile/Deployment/Service/NetworkPolicy, and a controller spec (call the gRPC method with a proto request, assert the service call).
+5. Consumers get a typed `*GrpcClient` + `*GrpcClientModule` (see `CLAUDE.md`), never `EventClientService.sendAndReturnPromise`.
 
 ## When to Apply
 
@@ -57,11 +90,11 @@ If the module grows to have multiple services or controllers, group them into `s
 
 ## Architectural Rules (must hold)
 
-- **Controller**: NO business logic, NO data manipulation. Only delegates to the service. Must include Swagger decorators.
+- **Controller**: NO business logic, NO data manipulation. Only delegates to the service. Gateway-web HTTP controllers include Swagger decorators; microservice gRPC controllers do not.
 - **Service**: Holds business logic. MUST NOT execute database queries or external API calls directly — always go through the repository/client.
 - **Repository**: Direct DB / external API access only. Minimal logic, just query execution. Each microservice owns its DB — inject that service’s `PrismaService` (or equivalent client), **not** the removed shared database library from the monorepo.
 - **Mapper**: Optional. If created, methods MUST NOT be `static` — must be an `@Injectable()` class.
-- **DTOs**: Use `@ApiProperty` and `class-validator` decorators. `Update` DTOs should extend `PartialType` from `@nestjs/swagger`.
+- **DTOs (gateway-web HTTP only)**: Use `@ApiProperty` and `class-validator` decorators. `Update` DTOs should extend `PartialType` from `@nestjs/swagger`. Microservices use `type` aliases and proto types instead.
 - **Validation**: Use utility helpers like `checkExists` from `@ross2p/common` (or the project equivalent) for existence checks instead of ad-hoc `if (!x) throw`.
 
 ## Templates
@@ -112,7 +145,7 @@ import { NameEntityRepository } from './name-entity.repository';
 export class NameEntityModule {}
 ```
 
-### 2. Controller — `name-entity.controller.ts`
+### 2. Controller — `name-entity.controller.ts` (gateway-web HTTP flavour)
 
 CRITICAL: NO business logic. The controller only calls the service. Always include Swagger decorators (`@ApiTags`, `@ApiBearerAuth`, `@ApiOperation`, `@ApiResponse`).
 
@@ -281,7 +314,7 @@ export class NameEntityMapper {
 }
 ```
 
-### 6. DTOs — `dtos/create-name-entity.dto.ts`
+### 6. DTOs — `dtos/create-name-entity.dto.ts` (gateway-web HTTP flavour)
 
 ```typescript
 import { ApiProperty } from '@nestjs/swagger';
@@ -351,7 +384,10 @@ Follow this checklist on every invocation:
 - Generic method names like `update(id, dto)`, `delete(id)`, `findOne(id)` on services or controllers.
 - `static` methods on mappers.
 - Update DTOs that duplicate fields instead of extending `PartialType(CreateXDto)`.
-- Missing `@ApiOperation` / `@ApiResponse` on controller routes.
+- Missing `@ApiOperation` / `@ApiResponse` on gateway-web controller routes.
+- Swagger decorators, `class-validator` or class DTOs in a domain microservice.
+- Kafka `@MessagePattern` / `EventClientService.sendAndReturnPromise` for a new synchronous call (use a gRPC contract).
+- `as Proto.Enum` casts or `toXxxMessage()` mappers in controllers/services (look the enum up by key; assert Prisma enum rows once in the repository).
 - Forgetting to add the new module to its parent module's `imports`.
 
 ## Example — User Module (reference shape in this codebase)
