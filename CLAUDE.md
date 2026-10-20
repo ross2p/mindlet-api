@@ -317,8 +317,13 @@ login(@Body() dto: LoginDto) { ... }
 ### gRPC handlers — `@GrpcMethod`, typed requests, no mappers
 
 Synchronous RPC between services is **gRPC**; Kafka carries only fire-and-forget events. Contracts
-live in `libs/common/src/protos/<service>/*.proto` (ts-proto generates the types; a hand-written
-`index.ts` barrel exports them as `CourseCoreProto`, `TeamRoleProto`, …). Each service has a
+live in `libs/common/src/protos/<service>/*.proto` — `libs/common` ships only the `.proto` files
+(copied to `dist/protos`) and the `*_GRPC_*` configs, it does **not** generate types. Each app generates
+the ts-proto types for the domains it uses (`npm run proto:generate`, run automatically by
+build/start/test) into the gitignored `generated/protos` (next to the Prisma client in `generated/client`);
+the script also writes `generated/protos/index.ts`, a barrel that exports each file as
+`CourseCoreProto`, `TeamRoleProto`, … (import from that barrel via a relative path, not from
+`@ross2p/common`). A new domain/file means: add the domain to the app's `proto:generate` args. Each service has a
 `<SERVICE>_GRPC_*` config in `libs/common/src/configs` and serves it from `main.ts` (ports 50051+).
 
 A controller **implements the generated `*ServiceController` interface** and binds each method

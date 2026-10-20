@@ -18,7 +18,7 @@ The **gateway-web** template further down (sections 2, 6–8) is the HTTP flavou
 
 ### Microservice (gRPC) resource
 
-1. Add the contract in `libs/common/src/protos/<service>/<entity>.proto` (service `NameEntityService`, request messages with `optional` fields and the clear-conventions from `CLAUDE.md`, `*Message` responses with wrapper types for nullable columns), export it from that folder's `index.ts` barrel, add it to `<SERVICE>_GRPC_DOMAINS`, make sure `libs/common/nest-cli.json` copies the directory, then `npm run build` in `libs/common`.
+1. Add the contract in `libs/common/src/protos/<service>/<entity>.proto` (service `NameEntityService`, request messages with `optional` fields and the clear-conventions from `CLAUDE.md`, `*Message` responses with wrapper types for nullable columns), add it to `<SERVICE>_GRPC_DOMAINS`, make sure `libs/common/nest-cli.json` copies the directory, then `npm run build` in `libs/common`, and in the app that uses it add the domain to `proto:generate` and export the new file from `src/protos/index.ts`.
 2. Controller (no business logic, no mapping functions, no Swagger):
 
 ```typescript
