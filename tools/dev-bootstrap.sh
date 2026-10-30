@@ -8,7 +8,7 @@ for app in apps/*/; do
     continue
   fi
   echo "[app] $app"
-  (cd "$app" && rm -rf node_modules package-lock.json && npm install --prefer-online)
+  (cd "$app" && rm -rf node_modules package-lock.json && npm install --prefer-online && npm run --if-present client:generate)
 done
 
 echo "Done. Run a service: cd apps/auth && npm run start:dev"
