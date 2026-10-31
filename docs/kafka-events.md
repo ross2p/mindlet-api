@@ -59,7 +59,7 @@ Grouped by **owning service** (the handler). **`Status`**: `implemented` = handl
 
 | Pattern | Producer(s) | Consumer | Request (summary) | Response (summary) | When / why | Status |
 |---------|-------------|----------|-------------------|--------------------|------------|--------|
-| `auth.user.validate` | HTTP stacks using [`AuthGuard`](../libs/common/src/modules/auth-guards/auth.guard.ts) / [`OptionalAuthGuard`](../libs/common/src/modules/auth-guards/optional-auth.guard.ts) (`Services.AUTH` client) | `auth` | `{ accessToken }` | `AuthenticatedUser` | Validate JWT + active session on protected routes | **implemented** — [`AuthController`](../apps/auth/src/auth/auth.controller.ts) |
+| `auth.user.validate` | gateway-web [`AuthGuard`](../apps/gateway-web/src/guards/auth.guard.ts) / [`OptionalAuthGuard`](../apps/gateway-web/src/guards/optional-auth.guard.ts) via [`AuthClient`](../apps/gateway-web/src/modules/auth/auth-client.service.ts) | `auth` | `{ accessToken }` | `AuthenticatedUser` | Validate JWT + active session on protected routes | **implemented** — [`AuthController`](../apps/auth/src/auth/auth.controller.ts) |
 
 ### `user`
 
